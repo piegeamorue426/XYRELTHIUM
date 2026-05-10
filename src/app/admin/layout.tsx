@@ -1,37 +1,41 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { AdminShell } from './AdminShell';
 
-import React, { useState } from 'react';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { Menu } from 'lucide-react';
-
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const headersList = headers();
+  const pathname = headersList.get('x-pathname') || '';
+  const isLoginPage = pathname === '/admin/login';
 
-  return (
-    <div className="flex h-screen bg-[#0a0a0f] overflow-hidden">
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+  // Login page renders without admin role verification
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile top bar */}
-        <header className="flex items-center gap-4 border-b border-white/5 bg-[#0d0d14] px-4 py-3 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="text-white/60 hover:text-white transition-colors"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <span className="text-sm font-semibold text-white">Xyrelthium Admin</span>
-        </header>
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+  if (!user) {
+    redirect('/admin/login');
+  }
+
+  // Verify admin role - prevents non-admin users from seeing admin UI
+  const adminClient = createAdminClient();
+  const { data: profile } = await adminClient
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || profile.role !== 'admin') {
+    redirect('/');
+  }
+
+  return <AdminShell>{children}</AdminShell>;
 }

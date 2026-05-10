@@ -18,7 +18,7 @@ export interface Product {
 
 export interface Order {
   id: string;
-  user_id: string;
+  user_id: string | null;
   items: OrderItem[];
   total: number; // in cents
   status: 'pending' | 'paid' | 'shipped' | 'delivered';

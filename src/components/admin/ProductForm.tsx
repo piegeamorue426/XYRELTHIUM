@@ -29,7 +29,12 @@ export interface ProductFormData {
   images: string[];
 }
 
-const categories = ['Tech', 'Gaming', 'Electromenager', 'Digital'];
+const categories = [
+  { label: 'Tech', value: 'tech' },
+  { label: 'Gaming', value: 'gaming' },
+  { label: 'Electromenager', value: 'electromenager' },
+  { label: 'Digital', value: 'digital' },
+];
 
 export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormProps) {
   const [title, setTitle] = useState(initialData?.title || '');
@@ -41,7 +46,7 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
   const [compareAtPrice, setCompareAtPrice] = useState(
     initialData?.compare_at_price ? (initialData.compare_at_price / 100).toString() : ''
   );
-  const [category, setCategory] = useState(initialData?.category || categories[0]);
+  const [category, setCategory] = useState(initialData?.category || categories[0].value);
   const [stock, setStock] = useState(initialData?.stock?.toString() || '0');
   const [status, setStatus] = useState<'available' | 'sold'>(initialData?.status || 'available');
   const [isDigital, setIsDigital] = useState(initialData?.is_digital || false);
@@ -199,8 +204,8 @@ export function ProductForm({ initialData, onSubmit, isLoading }: ProductFormPro
               className="w-full bg-[#1a1a24] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white transition-all duration-200 focus:outline-none focus:border-violet-500/50"
             >
               {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
                 </option>
               ))}
             </select>

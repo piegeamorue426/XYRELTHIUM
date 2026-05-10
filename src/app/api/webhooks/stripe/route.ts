@@ -44,17 +44,36 @@ export async function POST(request: Request) {
       }
 
       const userId = metadata.user_id;
-      const items = JSON.parse(metadata.items || '[]');
+
+      // Retrieve items: try metadata first, fall back to Stripe line items
+      // This handles cases where metadata.items was truncated (500-char limit)
+      let items: { product_id: string; title: string; price: number; quantity: number; image: string }[];
+
+      try {
+        items = JSON.parse(metadata.items || '[]');
+        if (!Array.isArray(items) || items.length === 0) {
+          throw new Error('Empty items array');
+        }
+      } catch {
+        // metadata.items was truncated or missing - retrieve from Stripe
+        const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+        items = lineItems.data.map((li) => ({
+          product_id: (li.price?.metadata?.product_id as string) || '',
+          title: li.description || '',
+          price: li.price?.unit_amount || 0,
+          quantity: li.quantity || 1,
+          image: '',
+        }));
+      }
 
       // Calculate total from items
       const total = items.reduce(
-        (sum: number, item: { price: number; quantity: number }) =>
-          sum + item.price * item.quantity,
+        (sum, item) => sum + item.price * item.quantity,
         0
       );
 
       // Create order record
-      await supabase.from('orders').insert({
+      const { error: orderError } = await supabase.from('orders').insert({
         user_id: userId !== 'guest' ? userId : null,
         items,
         total,
@@ -63,23 +82,37 @@ export async function POST(request: Request) {
         shipping_address: null,
       });
 
-      // Update product stock
-      for (const item of items) {
-        const { data: product } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.product_id)
-          .single();
+      if (orderError) {
+        console.error('Failed to create order:', orderError);
+        // Return 500 so Stripe retries delivery
+        return NextResponse.json(
+          { error: 'Failed to create order' },
+          { status: 500 }
+        );
+      }
 
-        if (product && product.stock > 0) {
-          await supabase
-            .from('products')
-            .update({ stock: product.stock - item.quantity })
-            .eq('id', item.product_id);
+      // Decrement product stock atomically using database function
+      for (const item of items) {
+        if (!item.product_id) continue;
+
+        const { error: stockError } = await supabase.rpc('decrement_stock', {
+          p_product_id: item.product_id,
+          p_quantity: item.quantity,
+        });
+
+        if (stockError) {
+          // Stock update failure is non-critical - log but don't fail the webhook
+          // The order is already recorded successfully
+          console.error(`Stock decrement failed for product ${item.product_id}:`, stockError);
         }
       }
     } catch (error) {
       console.error('Error processing webhook:', error);
+      // Return 500 for transient failures so Stripe retries
+      return NextResponse.json(
+        { error: 'Internal processing error' },
+        { status: 500 }
+      );
     }
   }
 

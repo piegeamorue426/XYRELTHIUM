@@ -1,28 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-
-async function verifyAdmin() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: 'Non authentifie', status: 401 };
-  }
-
-  const adminClient = createAdminClient();
-  const { data: profile } = await adminClient
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile || profile.role !== 'admin') {
-    return { error: 'Acces refuse', status: 403 };
-  }
-
-  return { user };
-}
+import { verifyAdmin } from '@/lib/admin';
 
 export async function GET() {
   const auth = await verifyAdmin();

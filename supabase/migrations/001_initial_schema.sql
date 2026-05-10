@@ -90,7 +90,7 @@ CREATE TRIGGER on_auth_user_created
 -- ============================================
 CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   items JSONB NOT NULL DEFAULT '[]',
   total INTEGER NOT NULL, -- total in cents
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'shipped', 'delivered')),
@@ -101,6 +101,18 @@ CREATE TABLE orders (
 
 CREATE INDEX idx_orders_user_id ON orders(user_id);
 CREATE INDEX idx_orders_status ON orders(status);
+
+-- ============================================
+-- Atomic stock decrement function
+-- ============================================
+CREATE OR REPLACE FUNCTION decrement_stock(p_product_id UUID, p_quantity INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE products
+  SET stock = stock - p_quantity
+  WHERE id = p_product_id AND stock >= p_quantity;
+END;
+$$ LANGUAGE plpgsql;
 
 -- ============================================
 -- Row Level Security (RLS)
@@ -190,7 +202,7 @@ CREATE POLICY "Users can view their own orders"
 
 CREATE POLICY "Users can insert their own orders"
   ON orders FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
 CREATE POLICY "Admins can view all orders"
   ON orders FOR SELECT

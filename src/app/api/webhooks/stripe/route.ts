@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       for (const item of items) {
         if (!item.product_id) continue;
 
-        const { error: stockError } = await supabase.rpc('decrement_stock', {
+        const { data: rowsAffected, error: stockError } = await supabase.rpc('decrement_stock', {
           p_product_id: item.product_id,
           p_quantity: item.quantity,
         });
@@ -104,6 +104,9 @@ export async function POST(request: Request) {
           // Stock update failure is non-critical - log but don't fail the webhook
           // The order is already recorded successfully
           console.error(`Stock decrement failed for product ${item.product_id}:`, stockError);
+        } else if (rowsAffected === 0) {
+          // Stock was insufficient - the update matched zero rows
+          console.warn(`Insufficient stock for product ${item.product_id} (requested: ${item.quantity}). Order is paid but stock was not decremented.`);
         }
       }
     } catch (error) {

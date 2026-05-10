@@ -43,17 +43,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Set pathname header for server components
-  response.headers.set('x-pathname', request.nextUrl.pathname);
-
   // Protect /account routes
   if (request.nextUrl.pathname.startsWith('/account') && !user) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
-  // Protect /admin routes (except /admin/login)
-  if (request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login') && !user) {
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+  // Protect /admin routes
+  if (request.nextUrl.pathname.startsWith('/admin') && !user) {
+    return NextResponse.redirect(new URL('/auth/admin', request.url));
   }
 
   return response;

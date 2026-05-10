@@ -106,11 +106,16 @@ CREATE INDEX idx_orders_status ON orders(status);
 -- Atomic stock decrement function
 -- ============================================
 CREATE OR REPLACE FUNCTION decrement_stock(p_product_id UUID, p_quantity INTEGER)
-RETURNS VOID AS $$
+RETURNS INTEGER AS $$
+DECLARE
+  rows_affected INTEGER;
 BEGIN
   UPDATE products
   SET stock = stock - p_quantity
   WHERE id = p_product_id AND stock >= p_quantity;
+
+  GET DIAGNOSTICS rows_affected = ROW_COUNT;
+  RETURN rows_affected;
 END;
 $$ LANGUAGE plpgsql;
 

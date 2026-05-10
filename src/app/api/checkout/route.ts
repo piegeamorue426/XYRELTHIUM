@@ -34,6 +34,9 @@ export async function POST(request: Request) {
             images: item.image ? [item.image] : [],
           },
           unit_amount: item.price,
+          metadata: {
+            product_id: item.product_id,
+          },
         },
         quantity: item.quantity,
       })),

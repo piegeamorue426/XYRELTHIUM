@@ -33,7 +33,7 @@ export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/admin/login');
+    router.push('/auth/admin');
   };
 
   const isActive = (href: string) => {

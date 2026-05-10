@@ -20,6 +20,7 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
       price: product.price,
       quantity: 1,
       image: product.images[0] || '/placeholder-product.jpg',
+      stock: product.stock,
     });
   };
 

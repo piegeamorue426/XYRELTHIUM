@@ -3,7 +3,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { OrderItem } from '@/types/database';
 
-export interface CartItem extends OrderItem {}
+export interface CartItem extends OrderItem {
+  stock?: number;
+}
 
 interface CartContextType {
   items: CartItem[];
@@ -54,9 +56,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => {
       const existing = prev.find((item) => item.product_id === newItem.product_id);
       if (existing) {
+        const maxStock = newItem.stock || existing.stock || 99;
+        const newQuantity = Math.min(existing.quantity + newItem.quantity, maxStock);
         return prev.map((item) =>
           item.product_id === newItem.product_id
-            ? { ...item, quantity: item.quantity + newItem.quantity }
+            ? { ...item, quantity: newQuantity, stock: maxStock }
             : item
         );
       }
@@ -75,9 +79,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setItems((prev) =>
-      prev.map((item) =>
-        item.product_id === productId ? { ...item, quantity } : item
-      )
+      prev.map((item) => {
+        if (item.product_id === productId) {
+          const maxStock = item.stock || 99;
+          return { ...item, quantity: Math.min(quantity, maxStock) };
+        }
+        return item;
+      })
     );
   }, []);
 

@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import type { Profile, Order } from '@/types/database';
 
 const statusLabels: Record<string, { label: string; variant: 'success' | 'warning' | 'info' | 'default' }> = {
   pending: { label: 'En attente', variant: 'warning' },
@@ -31,14 +32,14 @@ export default async function AccountPage() {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .single() as { data: Profile | null };
 
   // Fetch orders
   const { data: orders } = await supabase
     .from('orders')
     .select('*')
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }) as { data: Order[] | null };
 
   return (
     <>

@@ -11,7 +11,7 @@ interface AddToCartButtonProps {
 }
 
 export function AddToCartButton({ product }: AddToCartButtonProps) {
-  const { addItem } = useCart();
+  const { addItem, clearCart } = useCart();
 
   const handleAddToCart = () => {
     addItem({
@@ -42,6 +42,7 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
       });
       const data = await response.json();
       if (data.url) {
+        clearCart();
         window.location.href = data.url;
       }
     } catch (error) {

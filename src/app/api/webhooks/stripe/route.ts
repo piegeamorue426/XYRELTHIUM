@@ -45,29 +45,32 @@ export async function POST(request: Request) {
 
       const userId = metadata.user_id;
 
-      // Retrieve items: try metadata first, fall back to Stripe line items
-      // This handles cases where metadata.items was truncated (500-char limit)
-      let items: { product_id: string; title: string; price: number; quantity: number; image: string }[];
-
+      // Always retrieve line items from Stripe (metadata has 500-char limit and gets truncated)
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
+      
+      // Try to get product_ids from metadata (may be truncated for large carts)
+      let metadataItems: { product_id: string; title: string; price: number; quantity: number; image: string }[] = [];
       try {
-        items = JSON.parse(metadata.items || '[]');
-        if (!Array.isArray(items) || items.length === 0) {
-          throw new Error('Empty items array');
-        }
+        metadataItems = JSON.parse(metadata.items || '[]');
       } catch {
-        // metadata.items was truncated or missing - retrieve from Stripe
-        const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-        items = lineItems.data.map((li) => ({
-          product_id: (li.price?.metadata?.product_id as string) || '',
-          title: li.description || '',
-          price: li.price?.unit_amount || 0,
-          quantity: li.quantity || 1,
-          image: '',
-        }));
+        // metadata was truncated, that's fine
       }
 
-      // Calculate total from items
-      const total = items.reduce(
+      // Build items array from Stripe line items (always accurate)
+      const items = lineItems.data.map((li, index) => {
+        // Try to match with metadata item for product_id and image
+        const metaItem = metadataItems[index] || metadataItems.find(m => m.title === li.description);
+        return {
+          product_id: metaItem?.product_id || (li.price?.product_data?.metadata?.product_id as string) || '',
+          title: li.description || metaItem?.title || 'Produit',
+          price: li.price?.unit_amount || 0,
+          quantity: li.quantity || 1,
+          image: metaItem?.image || '',
+        };
+      });
+
+      // Use Stripe's amount_total (always correct)
+      const total = session.amount_total || items.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0
       );

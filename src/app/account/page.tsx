@@ -84,33 +84,48 @@ export default async function AccountPage() {
                   const status = statusLabels[order.status] || statusLabels.pending;
                   return (
                     <Card key={order.id} padding="md">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-white">
-                              Commande #{order.id.slice(0, 8)}
-                            </span>
-                            <Badge variant={status.variant}>
-                              {status.label}
-                            </Badge>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-white">
+                                Commande #{order.id.slice(0, 8)}
+                              </span>
+                              <Badge variant={status.variant}>
+                                {status.label}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-white/40 mt-1">
+                              {new Date(order.created_at).toLocaleDateString('fr-FR', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                              })}
+                            </p>
                           </div>
-                          <p className="text-xs text-white/40 mt-1">
-                            {new Date(order.created_at).toLocaleDateString('fr-FR', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric',
-                            })}
-                          </p>
-                          <p className="text-xs text-white/50 mt-1">
-                            {order.items.length} article{order.items.length > 1 ? 's' : ''}
-                            {' - '}
-                            {order.items.map((item) => item.title).join(', ')}
-                          </p>
+                          <div className="text-right">
+                            <span className="text-lg font-bold text-white">
+                              {formatPrice(order.total)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-lg font-bold text-white">
-                            {formatPrice(order.total)}
-                          </span>
+                        {/* Liste des articles */}
+                        <div className="border-t border-white/5 pt-3 space-y-2">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-white/70">
+                                  {item.quantity}x
+                                </span>
+                                <span className="text-sm text-white">
+                                  {item.title}
+                                </span>
+                              </div>
+                              <span className="text-sm text-white/60">
+                                {formatPrice(item.price * item.quantity)}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </Card>

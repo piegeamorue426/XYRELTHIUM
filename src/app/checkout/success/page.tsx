@@ -1,11 +1,20 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { CheckCircle, Package, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { useCart } from '@/components/cart/CartProvider';
 
 export default function CheckoutSuccessPage() {
+  const { clearCart } = useCart();
+
+  useEffect(() => {
+    clearCart();
+  }, []);
+
   return (
     <>
       <Header />

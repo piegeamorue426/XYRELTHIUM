@@ -47,9 +47,8 @@ export async function POST(request: Request) {
             title: item.title,
             price: item.price,
             quantity: item.quantity,
-            image: item.image,
           }))
-        ),
+        ).slice(0, 500),
       },
     });
 

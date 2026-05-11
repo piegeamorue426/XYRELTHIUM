@@ -54,27 +54,34 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
   const inStock = product.stock > 0;
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
-      <Button
-        onClick={handleAddToCart}
-        variant="secondary"
-        size="lg"
-        icon={<ShoppingCart className="h-4 w-4" />}
-        disabled={!inStock}
-        className="flex-1"
-      >
-        Ajouter au panier
-      </Button>
-      <Button
-        onClick={handleBuyNow}
-        variant="primary"
-        size="lg"
-        icon={<Zap className="h-4 w-4" />}
-        disabled={!inStock}
-        className="flex-1"
-      >
-        Acheter maintenant
-      </Button>
+    <div className="space-y-4">
+      {!inStock && (
+        <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <p className="text-sm font-medium text-red-400">Rupture de stock - Ce produit est actuellement indisponible</p>
+        </div>
+      )}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button
+          onClick={handleAddToCart}
+          variant="secondary"
+          size="lg"
+          icon={<ShoppingCart className="h-4 w-4" />}
+          disabled={!inStock}
+          className="flex-1"
+        >
+          {inStock ? 'Ajouter au panier' : 'Indisponible'}
+        </Button>
+        <Button
+          onClick={handleBuyNow}
+          variant="primary"
+          size="lg"
+          icon={<Zap className="h-4 w-4" />}
+          disabled={!inStock}
+          className="flex-1"
+        >
+          {inStock ? 'Acheter maintenant' : 'Indisponible'}
+        </Button>
+      </div>
     </div>
   );
 }

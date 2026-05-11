@@ -66,6 +66,13 @@ export default function AdminSupportPage() {
     fetchTickets();
   };
 
+  const handleDelete = async (ticketId: string) => {
+    if (!confirm('Supprimer ce ticket et tous ses messages ?')) return;
+    await fetch('/api/admin/support', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticketId }) });
+    if (selectedTicket?.id === ticketId) setSelectedTicket(null);
+    fetchTickets();
+  };
+
   const formatTime = (d: string) => new Date(d).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -107,6 +114,7 @@ export default function AdminSupportPage() {
                 {selectedTicket.status !== 'closed' && (
                   <button onClick={() => handleClose(selectedTicket.id)} className="text-xs px-2 py-1 text-white/50 border border-white/10 rounded hover:bg-white/5">Fermer</button>
                 )}
+                <button onClick={() => handleDelete(selectedTicket.id)} className="text-xs px-2 py-1 text-red-400/70 border border-red-500/20 rounded hover:bg-red-500/10 hover:text-red-400">Supprimer</button>
               </div>
 
               {/* Messages */}

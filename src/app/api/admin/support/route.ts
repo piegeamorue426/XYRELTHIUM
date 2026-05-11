@@ -35,3 +35,19 @@ export async function PATCH(request: Request) {
   if (error) return NextResponse.json({ error: 'Erreur' }, { status: 500 });
   return NextResponse.json({ success: true });
 }
+
+export async function DELETE(request: Request) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Non autorise' }, { status: 401 });
+
+  const adminClient = createAdminClient();
+  const { data: profile } = await adminClient.from('profiles').select('role').eq('id', user.id).single();
+  if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Non autorise' }, { status: 403 });
+
+  const { ticketId } = await request.json();
+  await adminClient.from('support_messages').delete().eq('ticket_id', ticketId);
+  await adminClient.from('support_tickets').delete().eq('id', ticketId);
+
+  return NextResponse.json({ success: true });
+}

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import { CartProvider } from '@/components/cart/CartProvider';
 import { CartDrawer } from '@/components/cart/CartDrawer';
+import { FloatingSupport } from '@/components/support/FloatingSupport';
 import './globals.css';
 
 const inter = Inter({
@@ -34,6 +35,7 @@ export default function RootLayout({
         <CartProvider>
           {children}
           <CartDrawer />
+          <FloatingSupport />
         </CartProvider>
       </body>
     </html>

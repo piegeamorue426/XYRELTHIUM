@@ -34,7 +34,8 @@ export default function SupportPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setSuccess(true);
+        // Redirect to chat
+        window.location.href = `/support/${data.ticketId}`;
       } else {
         setError(data.error || 'Erreur lors de l\'envoi');
       }

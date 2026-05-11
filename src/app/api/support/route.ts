@@ -32,6 +32,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Erreur lors de la creation du ticket' }, { status: 500 });
     }
 
+    // Create first message in the conversation
+    await adminClient.from('support_messages').insert({
+      ticket_id: ticket.id,
+      sender_role: 'client',
+      message,
+    });
+
     // Send Discord notification
     try {
       await fetch(DISCORD_WEBHOOK_URL, {

@@ -53,10 +53,11 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ url: session.url });
-  } catch (error) {
-    console.error('Checkout session error:', error);
+  } catch (error: any) {
+    console.error('Checkout session error:', error?.message || error);
+    const errorMessage = error?.raw?.message || error?.message || 'Erreur lors de la creation de la session de paiement.';
     return NextResponse.json(
-      { error: 'Erreur lors de la creation de la session de paiement.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

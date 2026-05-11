@@ -1,44 +1,38 @@
-import { createClient } from '@/lib/supabase/server';
+import React from 'react';
 import { notFound } from 'next/navigation';
-import { Metadata } from 'next';
-import ProductGrid from '@/components/products/ProductGrid';
+import type { Metadata } from 'next';
+import { createClient } from '@/lib/supabase/server';
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
+import { ProductGrid } from '@/components/products/ProductGrid';
 
 interface CategoryPageProps {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
 }
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: category } = await supabase
     .from('categories')
-    .select('*')
-    .eq('slug', slug)
+    .select('name, description')
+    .eq('slug', params.slug)
     .single();
 
-  if (!category) {
-    return { title: 'Catégorie introuvable' };
-  }
+  if (!category) return { title: 'Categorie introuvable' };
 
   return {
-    title: category.name,
-    description: category.description || `Découvrez nos produits dans la catégorie ${category.name}`,
-    openGraph: {
-      title: `${category.name} - Xyrelthium`,
-      description: category.description || `Découvrez nos produits dans la catégorie ${category.name}`,
-      images: category.image ? [{ url: category.image }] : [],
-    },
+    title: `${category.name} | Xyrelthium`,
+    description: category.description || `Decouvrez nos produits ${category.name}`,
   };
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const { data: category } = await supabase
     .from('categories')
     .select('*')
-    .eq('slug', slug)
+    .eq('slug', params.slug)
     .single();
 
   if (!category) {
@@ -48,25 +42,30 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const { data: products } = await supabase
     .from('products')
     .select('*')
-    .eq('category_id', category.id)
+    .eq('category', params.slug)
+    .eq('status', 'available')
     .order('created_at', { ascending: false });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-white">{category.name}</h1>
-        {category.description && (
-          <p className="mt-2 text-gray-400">{category.description}</p>
-        )}
-      </div>
+    <>
+      <Header />
+      <main className="min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Page Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-white">{category.name}</h1>
+            {category.description && (
+              <p className="mt-2 text-sm text-white/50">
+                {category.description}
+              </p>
+            )}
+          </div>
 
-      {products && products.length > 0 ? (
-        <ProductGrid products={products} />
-      ) : (
-        <div className="text-center py-16">
-          <p className="text-gray-500">Aucun produit dans cette catégorie pour le moment.</p>
+          {/* Products */}
+          <ProductGrid products={products || []} />
         </div>
-      )}
-    </div>
+      </main>
+      <Footer />
+    </>
   );
 }

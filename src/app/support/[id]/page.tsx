@@ -23,18 +23,23 @@ export default function TicketChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMsgCountRef = useRef(0);
   const supabase = createClient();
 
   const fetchData = async () => {
     const { data: t } = await supabase.from('support_tickets').select('*').eq('id', ticketId).single();
     setTicket(t);
     const { data: msgs } = await supabase.from('support_messages').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
-    setMessages(msgs || []);
+    const newMsgs = msgs || [];
+    if (newMsgs.length > prevMsgCountRef.current) {
+      prevMsgCountRef.current = newMsgs.length;
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+    setMessages(newMsgs);
     setLoading(false);
   };
 
   useEffect(() => { fetchData(); const i = setInterval(fetchData, 5000); return () => clearInterval(i); }, [ticketId]);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleSend = async () => {
     if (!newMessage.trim() || !ticket || ticket.status === 'closed') return;

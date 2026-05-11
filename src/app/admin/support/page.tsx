@@ -26,6 +26,7 @@ export default function AdminSupportPage() {
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMsgCountRef = useRef(0);
   const supabase = createClient();
 
   const fetchTickets = async () => {
@@ -37,12 +38,16 @@ export default function AdminSupportPage() {
 
   const fetchMessages = async (ticketId: string) => {
     const { data } = await supabase.from('support_messages').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
-    setMessages(data || []);
+    const newMsgs = data || [];
+    if (newMsgs.length > prevMsgCountRef.current) {
+      prevMsgCountRef.current = newMsgs.length;
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+    setMessages(newMsgs);
   };
 
   useEffect(() => { fetchTickets(); }, []);
   useEffect(() => { if (selectedTicket) { fetchMessages(selectedTicket.id); const i = setInterval(() => fetchMessages(selectedTicket.id), 5000); return () => clearInterval(i); } }, [selectedTicket]);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleReply = async () => {
     if (!selectedTicket || !reply.trim()) return;

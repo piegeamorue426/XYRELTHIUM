@@ -11,6 +11,7 @@ import {
   Image,
   LogOut,
   X,
+  MessageCircle,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -24,6 +25,7 @@ const navItems = [
   { label: 'Produits', href: '/admin/products', icon: Package },
   { label: 'Commandes', href: '/admin/orders', icon: ShoppingBag },
   { label: 'Media', href: '/admin/media', icon: Image },
+  { label: 'Support', href: '/admin/support', icon: MessageCircle },
 ];
 
 export function AdminSidebar({ open, onClose }: AdminSidebarProps) {

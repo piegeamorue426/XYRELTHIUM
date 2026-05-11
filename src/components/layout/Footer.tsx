@@ -19,6 +19,7 @@ const legalLinks = [
   { label: 'Conditions generales de vente', href: '/legal/cgv' },
   { label: 'Mentions legales', href: '/legal/mentions' },
   { label: 'Politique de confidentialite', href: '/legal/privacy' },
+  { label: 'Contacter le support', href: '/support' },
 ];
 
 export function Footer() {

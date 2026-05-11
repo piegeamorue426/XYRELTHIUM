@@ -1,6 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { Package, User, MessageCircle } from 'lucide-react';
+import { LogoutButton } from '@/components/auth/LogoutButton';
 import { createClient } from '@/lib/supabase/server';
 import { formatPrice } from '@/lib/utils';
 import { Header } from '@/components/layout/Header';
@@ -57,16 +58,19 @@ export default async function AccountPage() {
 
           {/* Profile Section */}
           <Card padding="lg" className="mb-8">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-violet-600/20 flex items-center justify-center">
-                <User className="h-6 w-6 text-violet-400" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-violet-600/20 flex items-center justify-center">
+                  <User className="h-6 w-6 text-violet-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-white">
+                    {profile?.full_name || 'Utilisateur'}
+                  </h2>
+                  <p className="text-sm text-white/50">{user.email}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  {profile?.full_name || 'Utilisateur'}
-                </h2>
-                <p className="text-sm text-white/50">{user.email}</p>
-              </div>
+              <LogoutButton />
             </div>
           </Card>
 

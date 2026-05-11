@@ -1,18 +1,15 @@
-import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import Stripe from 'stripe';
+import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { sendOrderConfirmationEmail } from '@/lib/email';
+import Stripe from 'stripe';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const body = await request.text();
-  const signature = headers().get('stripe-signature');
+  const signature = request.headers.get('stripe-signature');
 
   if (!signature) {
-    return NextResponse.json(
-      { error: 'Missing stripe-signature header' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
   }
 
   let event: Stripe.Event;
@@ -25,100 +22,94 @@ export async function POST(request: Request) {
     );
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
-    return NextResponse.json(
-      { error: 'Invalid signature' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
+    const userId = session.metadata?.user_id;
+    const itemsJson = session.metadata?.items;
 
-    try {
-      const supabase = createAdminClient();
-      const metadata = session.metadata;
+    if (!userId || !itemsJson) {
+      return NextResponse.json({ error: 'Missing metadata' }, { status: 400 });
+    }
 
-      if (!metadata) {
-        console.error('No metadata in session');
-        return NextResponse.json({ received: true });
-      }
+    const items = JSON.parse(itemsJson) as Array<{ productId: string; quantity: number }>;
 
-      const userId = metadata.user_id;
+    // Fetch products
+    const productIds = items.map((i) => i.productId);
+    const { data: products } = await supabaseAdmin
+      .from('products')
+      .select('*')
+      .in('id', productIds);
 
-      // Always retrieve line items from Stripe (metadata has 500-char limit and gets truncated)
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
-      
-      // Try to get product_ids from metadata (may be truncated for large carts)
-      let metadataItems: { product_id: string; title: string; price: number; quantity: number; image: string }[] = [];
-      try {
-        metadataItems = JSON.parse(metadata.items || '[]');
-      } catch {
-        // metadata was truncated, that's fine
-      }
+    if (!products) {
+      return NextResponse.json({ error: 'Products not found' }, { status: 400 });
+    }
 
-      // Build items array from Stripe line items (always accurate)
-      const items = lineItems.data.map((li, index) => {
-        // Try to match with metadata item for product_id and image
-        const metaItem = metadataItems[index] || metadataItems.find(m => m.title === li.description);
-        return {
-          product_id: metaItem?.product_id || (li.price?.product_data?.metadata?.product_id as string) || '',
-          title: li.description || metaItem?.title || 'Produit',
-          price: li.price?.unit_amount || 0,
-          quantity: li.quantity || 1,
-          image: metaItem?.image || '',
-        };
-      });
+    // Calculate total
+    const total = items.reduce((sum, item) => {
+      const product = products.find((p) => p.id === item.productId);
+      return sum + (product?.price || 0) * item.quantity;
+    }, 0);
 
-      // Use Stripe's amount_total (always correct)
-      const total = session.amount_total || items.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      );
-
-      // Create order record
-      const { error: orderError } = await supabase.from('orders').insert({
-        user_id: userId !== 'guest' ? userId : null,
-        items,
-        total,
+    // Create order
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .insert({
+        user_id: userId,
         status: 'paid',
+        total,
         stripe_session_id: session.id,
-        shipping_address: null,
+        shipping_address: session.shipping_details?.address || {},
+      })
+      .select()
+      .single();
+
+    if (orderError || !order) {
+      console.error('Error creating order:', orderError);
+      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
+    }
+
+    // Create order items
+    const orderItems = items.map((item) => ({
+      order_id: order.id,
+      product_id: item.productId,
+      quantity: item.quantity,
+      price: products.find((p) => p.id === item.productId)?.price || 0,
+    }));
+
+    await supabaseAdmin.from('order_items').insert(orderItems);
+
+    // Update product stock
+    for (const item of items) {
+      await supabaseAdmin.rpc('decrement_stock', {
+        product_id: item.productId,
+        quantity: item.quantity,
       });
+    }
 
-      if (orderError) {
-        console.error('Failed to create order:', orderError);
-        // Return 500 so Stripe retries delivery
-        return NextResponse.json(
-          { error: 'Failed to create order' },
-          { status: 500 }
-        );
-      }
-
-      // Decrement product stock atomically using database function
-      for (const item of items) {
-        if (!item.product_id) continue;
-
-        const { data: rowsAffected, error: stockError } = await supabase.rpc('decrement_stock', {
-          p_product_id: item.product_id,
-          p_quantity: item.quantity,
+    // Send confirmation email
+    try {
+      const customerEmail = session.customer_email || session.customer_details?.email;
+      if (customerEmail) {
+        await sendOrderConfirmationEmail({
+          to: customerEmail,
+          orderNumber: order.id.slice(0, 8).toUpperCase(),
+          items: items.map((item) => {
+            const product = products.find((p) => p.id === item.productId);
+            return {
+              name: product?.title || 'Produit',
+              quantity: item.quantity,
+              price: product?.price || 0,
+            };
+          }),
+          total,
         });
-
-        if (stockError) {
-          // Stock update failure is non-critical - log but don't fail the webhook
-          // The order is already recorded successfully
-          console.error(`Stock decrement failed for product ${item.product_id}:`, stockError);
-        } else if (rowsAffected === 0) {
-          // Stock was insufficient - the update matched zero rows
-          console.warn(`Insufficient stock for product ${item.product_id} (requested: ${item.quantity}). Order is paid but stock was not decremented.`);
-        }
       }
-    } catch (error) {
-      console.error('Error processing webhook:', error);
-      // Return 500 for transient failures so Stripe retries
-      return NextResponse.json(
-        { error: 'Internal processing error' },
-        { status: 500 }
-      );
+    } catch (emailError) {
+      console.error('Error sending confirmation email:', emailError);
+      // Don't fail the webhook if email fails
     }
   }
 

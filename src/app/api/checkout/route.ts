@@ -1,63 +1,91 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
-import type { OrderItem } from '@/types/database';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { items } = (await request.json()) as { items: OrderItem[] };
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!items || items.length === 0) {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Le panier est vide.' },
+        { error: 'Vous devez être connecté pour commander' },
+        { status: 401 }
+      );
+    }
+
+    const { items, coupon } = await request.json();
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json(
+        { error: 'Panier vide' },
         { status: 400 }
       );
     }
 
-    // Try to get user (optional - guest checkout allowed)
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // Fetch products from Supabase
+    const productIds = items.map((item: { productId: string }) => item.productId);
+    const { data: products } = await supabase
+      .from('products')
+      .select('*')
+      .in('id', productIds);
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    if (!products || products.length === 0) {
+      return NextResponse.json(
+        { error: 'Produits introuvables' },
+        { status: 400 }
+      );
+    }
 
-    // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode: 'payment',
-      line_items: items.map((item) => ({
+    // Create line items for Stripe
+    const lineItems = items.map((item: { productId: string; quantity: number }) => {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) throw new Error(`Product ${item.productId} not found`);
+
+      return {
         price_data: {
           currency: 'eur',
           product_data: {
-            name: item.title,
-            ...(item.image && item.image.startsWith('http') ? { images: [item.image] } : {}),
+            name: product.title,
+            images: product.images?.slice(0, 1) || [],
           },
-          unit_amount: item.price,
+          unit_amount: product.price,
         },
         quantity: item.quantity,
-      })),
-      success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/shop`,
-      metadata: {
-        user_id: user?.id || 'guest',
-        items: JSON.stringify(
-          items.map((item) => ({
-            product_id: item.product_id,
-            title: item.title,
-            price: item.price,
-            quantity: item.quantity,
-          }))
-        ).slice(0, 500),
-      },
+      };
     });
 
+    // Create checkout session
+    const sessionConfig: Record<string, unknown> = {
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/shop`,
+      customer_email: user.email,
+      metadata: {
+        user_id: user.id,
+        items: JSON.stringify(items),
+      },
+      shipping_address_collection: {
+        allowed_countries: ['FR', 'BE', 'CH', 'LU', 'MC'],
+      },
+    };
+
+    // Apply coupon if provided
+    if (coupon) {
+      sessionConfig.discounts = [{ coupon }];
+    }
+
+    const session = await stripe.checkout.sessions.create(
+      sessionConfig as Parameters<typeof stripe.checkout.sessions.create>[0]
+    );
+
     return NextResponse.json({ url: session.url });
-  } catch (error: any) {
-    console.error('Checkout session error:', error?.message || error);
-    const errorMessage = error?.raw?.message || error?.message || 'Erreur lors de la creation de la session de paiement.';
+  } catch (error) {
+    console.error('Checkout error:', error);
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Erreur lors de la création de la commande' },
       { status: 500 }
     );
   }

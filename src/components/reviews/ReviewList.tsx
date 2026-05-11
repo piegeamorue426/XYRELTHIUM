@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { createClient as createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { StarRating } from './StarRating';
 import { ReviewForm } from './ReviewForm';
 import { formatDate } from '@/lib/utils';

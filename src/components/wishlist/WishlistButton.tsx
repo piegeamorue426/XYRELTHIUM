@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Heart } from 'lucide-react';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { createClient as createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 
 export function WishlistButton({ productId }: { productId: string }) {

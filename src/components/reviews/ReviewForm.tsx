@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { createClient as createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { StarRating } from './StarRating';
 

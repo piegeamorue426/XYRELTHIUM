@@ -31,7 +31,7 @@ export async function POST(request: Request) {
           currency: 'eur',
           product_data: {
             name: item.title,
-            images: item.image ? [item.image] : [],
+            ...(item.image && item.image.startsWith('http') ? { images: [item.image] } : {}),
           },
           unit_amount: item.price,
         },

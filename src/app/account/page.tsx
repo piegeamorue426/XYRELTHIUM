@@ -135,6 +135,54 @@ export default async function AccountPage() {
               </div>
             )}
           </div>
+          {/* Support Tickets Section */}
+          <div className="mt-8">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Package className="h-5 w-5 text-violet-400" />
+              Mes tickets support
+            </h2>
+
+            {await (async () => {
+              const { data: tickets } = await supabase
+                .from('support_tickets')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+              if (!tickets || tickets.length === 0) {
+                return (
+                  <Card padding="lg">
+                    <div className="text-center py-6">
+                      <p className="text-sm text-white/50">Aucun ticket support</p>
+                      <a href="/support" className="text-sm text-violet-400 hover:text-violet-300 mt-2 inline-block">Contacter le support</a>
+                    </div>
+                  </Card>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  {tickets.map((ticket: any) => (
+                    <a key={ticket.id} href={`/support/${ticket.id}`}>
+                      <Card padding="md" className="hover:border-violet-500/30 transition-colors cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-sm font-medium text-white">{ticket.subject}</span>
+                            <p className="text-xs text-white/40 mt-1">
+                              {new Date(ticket.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </p>
+                          </div>
+                          <Badge variant={ticket.status === 'open' ? 'warning' : ticket.status === 'replied' ? 'info' : 'default'}>
+                            {ticket.status === 'open' ? 'En attente' : ticket.status === 'replied' ? 'Repondu' : 'Ferme'}
+                          </Badge>
+                        </div>
+                      </Card>
+                    </a>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </main>
       <Footer />

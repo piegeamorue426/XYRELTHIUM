@@ -9,6 +9,8 @@ import { ProductGallery } from '@/components/products/ProductGallery';
 import { ProductGrid } from '@/components/products/ProductGrid';
 import { AddToCartButton } from './AddToCartButton';
 import { Badge } from '@/components/ui/Badge';
+import { WishlistButton } from '@/components/wishlist/WishlistButton';
+import { ReviewList } from '@/components/reviews/ReviewList';
 
 interface ProductPageProps {
   params: { id: string };
@@ -68,7 +70,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
             {/* Info */}
             <div className="space-y-6">
               {/* Category */}
-              <Badge variant="info">{product.category}</Badge>
+              <div className="flex items-center justify-between">
+                <Badge variant="info">{product.category}</Badge>
+                <WishlistButton productId={product.id} />
+              </div>
 
               {/* Title */}
               <h1 className="text-2xl sm:text-3xl font-bold text-white">
@@ -157,6 +162,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </div>
             </section>
           )}
+
+          {/* Reviews */}
+          <section className="mt-16">
+            <ReviewList productId={product.id} />
+          </section>
 
           {/* Related Products */}
           {relatedProducts && relatedProducts.length > 0 && (

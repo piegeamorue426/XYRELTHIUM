@@ -31,3 +31,15 @@ export function generateSlug(title: string): string {
     .replace(/-+/g, '-') // Collapse multiple hyphens
     .replace(/^-|-$/g, ''); // Trim leading/trailing hyphens
 }
+
+
+/**
+ * Format a date string to French locale
+ */
+export function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}

@@ -5,7 +5,7 @@ import type { OrderItem } from '@/types/database';
 
 export async function POST(request: Request) {
   try {
-    const { items } = (await request.json()) as { items: OrderItem[] };
+    const { items, coupon } = (await request.json()) as { items: OrderItem[]; coupon?: string };
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
         },
         quantity: item.quantity,
       })),
+      ...(coupon ? { discounts: [{ coupon }] } : {}),
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/shop`,
       metadata: {

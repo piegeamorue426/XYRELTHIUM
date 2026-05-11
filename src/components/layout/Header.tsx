@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, User, Menu } from 'lucide-react';
+import { ShoppingCart, User, Menu, Search, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/components/cart/CartProvider';
 import { MobileMenu } from './MobileMenu';
@@ -50,7 +50,25 @@ export function Header() {
             </nav>
 
             {/* Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              {/* Search */}
+              <Link
+                href="/search"
+                className="p-2 text-white/70 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                aria-label="Rechercher"
+              >
+                <Search className="h-5 w-5" />
+              </Link>
+
+              {/* Wishlist */}
+              <Link
+                href="/wishlist"
+                className="p-2 text-white/70 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors"
+                aria-label="Favoris"
+              >
+                <Heart className="h-5 w-5" />
+              </Link>
+
               {/* Cart */}
               <button
                 onClick={() => setCartOpen(true)}

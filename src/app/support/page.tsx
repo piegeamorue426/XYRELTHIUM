@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Send, MessageCircle, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Send, MessageCircle, LogIn } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
@@ -14,8 +15,19 @@ export default function SupportPage() {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user);
+      if (user) {
+        setEmail(user.email || '');
+        setName(user.user_metadata?.full_name || '');
+      }
+    });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,20 +57,33 @@ export default function SupportPage() {
     setLoading(false);
   };
 
-  if (success) {
+  // Loading state
+  if (isLoggedIn === null) {
+    return (
+      <><Header /><main className="min-h-screen flex items-center justify-center"><div className="text-white/50">Chargement...</div></main><Footer /></>
+    );
+  }
+
+  // Not logged in
+  if (!isLoggedIn) {
     return (
       <>
         <Header />
         <main className="min-h-screen flex items-center justify-center">
           <Card padding="lg" className="max-w-md mx-auto text-center">
-            <CheckCircle className="h-12 w-12 text-emerald-400 mx-auto mb-4" />
-            <h1 className="text-xl font-bold text-white mb-2">Message envoye !</h1>
-            <p className="text-sm text-white/50 mb-4">
-              cesmax vous repondra dans les plus brefs delais.
+            <MessageCircle className="h-12 w-12 text-violet-400 mx-auto mb-4" />
+            <h1 className="text-xl font-bold text-white mb-2">Contacter le support</h1>
+            <p className="text-sm text-white/50 mb-6">
+              Pour contacter le support, veuillez d&apos;abord creer un compte ou vous connecter.
             </p>
-            <a href="/" className="text-sm text-violet-400 hover:text-violet-300 transition-colors">
-              Retour a l&apos;accueil
-            </a>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <a href="/auth/login">
+                <Button variant="primary" icon={<LogIn className="h-4 w-4" />}>Se connecter</Button>
+              </a>
+              <a href="/auth/signup">
+                <Button variant="secondary">Creer un compte</Button>
+              </a>
+            </div>
           </Card>
         </main>
         <Footer />

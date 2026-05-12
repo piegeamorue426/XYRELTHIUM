@@ -24,12 +24,32 @@ const trustItems = [
 export default async function HomePage() {
   const supabase = createClient();
 
-  const { data: products } = await supabase
+  // Get most sold products from orders
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('items')
+    .eq('status', 'paid');
+
+  // Count sales per product
+  const salesCount: Record<string, number> = {};
+  (orders || []).forEach((order: any) => {
+    (order.items || []).forEach((item: any) => {
+      if (item.product_id) {
+        salesCount[item.product_id] = (salesCount[item.product_id] || 0) + item.quantity;
+      }
+    });
+  });
+
+  // Get all available products
+  const { data: allProducts } = await supabase
     .from('products')
     .select('*')
-    .eq('status', 'available')
-    .order('created_at', { ascending: false })
-    .limit(8);
+    .eq('status', 'available');
+
+  // Sort by sales count (most sold first), then by date for products with no sales
+  const products = (allProducts || [])
+    .sort((a, b) => (salesCount[b.id] || 0) - (salesCount[a.id] || 0))
+    .slice(0, 8);
 
   return (
     <>
@@ -74,7 +94,7 @@ export default async function HomePage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-white">
-              Produits populaires
+              Produits les plus vendus
             </h2>
             <Link
               href="/shop"

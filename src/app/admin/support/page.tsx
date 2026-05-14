@@ -5,7 +5,7 @@ import { MessageCircle, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { formatDate } from '@/lib/utils';
+import { formatDate, maskEmail } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 
@@ -109,7 +109,7 @@ export default function AdminSupportPage() {
               <div className="p-4 border-b border-white/5 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-medium text-white">{selectedTicket.subject}</h3>
-                  <p className="text-xs text-white/40">{selectedTicket.name} - {selectedTicket.email}</p>
+                  <p className="text-xs text-white/40">{selectedTicket.name} - {maskEmail(selectedTicket.email)}</p>
                 </div>
                 {selectedTicket.status !== 'closed' && (
                   <button onClick={() => handleClose(selectedTicket.id)} className="text-xs px-2 py-1 text-white/50 border border-white/10 rounded hover:bg-white/5">Fermer</button>

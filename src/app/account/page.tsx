@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Package, User, MessageCircle } from 'lucide-react';
 import { LogoutButton } from '@/components/auth/LogoutButton';
 import { createClient } from '@/lib/supabase/server';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, maskEmail } from '@/lib/utils';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Badge } from '@/components/ui/Badge';
@@ -67,7 +67,7 @@ export default async function AccountPage() {
                   <h2 className="text-lg font-semibold text-white">
                     {profile?.full_name || 'Utilisateur'}
                   </h2>
-                  <p className="text-sm text-white/50">{user.email}</p>
+                  <p className="text-sm text-white/50">{maskEmail(user.email || '')}</p>
                 </div>
               </div>
               <LogoutButton />

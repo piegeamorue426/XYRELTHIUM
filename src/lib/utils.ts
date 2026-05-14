@@ -43,3 +43,15 @@ export function formatDate(dateStr: string): string {
     year: 'numeric',
   });
 }
+
+
+
+/**
+ * Mask an email address for privacy
+ * Example: "gdrmathis15@gmail.com" -> "g***5@gmail.com"
+ */
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain || local.length <= 2) return email;
+  return `${local[0]}***${local[local.length - 1]}@${domain}`;
+}

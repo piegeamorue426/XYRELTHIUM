@@ -2,6 +2,7 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { Package, User, MessageCircle } from 'lucide-react';
 import { LogoutButton } from '@/components/auth/LogoutButton';
+import { EditNameButton } from '@/components/auth/EditNameButton';
 import { createClient } from '@/lib/supabase/server';
 import { formatPrice, maskEmail } from '@/lib/utils';
 import { Header } from '@/components/layout/Header';
@@ -64,9 +65,7 @@ export default async function AccountPage() {
                   <User className="h-6 w-6 text-violet-400" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-white">
-                    {profile?.full_name || 'Utilisateur'}
-                  </h2>
+                  <EditNameButton currentName={profile?.full_name || 'Utilisateur'} />
                   <p className="text-sm text-white/50">{maskEmail(user.email || '')}</p>
                 </div>
               </div>
